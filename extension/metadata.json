@@ -1,0 +1,8 @@
+{
+  "name": "Monitor Settings",
+  "description": "Control DDC/CI external-monitor brightness from GNOME Quick Settings",
+  "uuid": "monitor-settings@avifenesh.github.io",
+  "shell-version": ["50"],
+  "url": "https://github.com/avifenesh/gnome-monitor-settings",
+  "version": 1
+}

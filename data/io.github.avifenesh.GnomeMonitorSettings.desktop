@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Monitor Settings
+Comment=Control settings exposed by DDC/CI monitors
+Exec=gnome-monitor-settings
+Icon=io.github.avifenesh.GnomeMonitorSettings
+Terminal=false
+Type=Application
+Categories=Settings;HardwareSettings;
+Keywords=display;monitor;brightness;contrast;DDC;
+DBusActivatable=false

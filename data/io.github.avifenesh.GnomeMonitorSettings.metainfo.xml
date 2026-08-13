@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.avifenesh.GnomeMonitorSettings</id>
+  <name>Monitor Settings</name>
+  <summary>Control external monitor brightness and picture settings</summary>
+  <developer id="io.github.avifenesh">
+    <name>Abhishek</name>
+  </developer>
+  <url type="homepage">https://github.com/avifenesh/gnome-monitor-settings</url>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <description>
+    <p>Monitor Settings exposes controls supported by DDC/CI external monitors and adds brightness sliders to GNOME Quick Settings.</p>
+  </description>
+  <launchable type="desktop-id">io.github.avifenesh.GnomeMonitorSettings.desktop</launchable>
+  <provides>
+    <binary>gnome-monitor-settings</binary>
+  </provides>
+  <releases>
+    <release version="0.1.0" date="2026-08-13" type="development"/>
+  </releases>
+  <content_rating type="oars-1.1"/>
+</component>

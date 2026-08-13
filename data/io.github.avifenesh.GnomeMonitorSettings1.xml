@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<node>
+  <interface name="io.github.avifenesh.GnomeMonitorSettings1">
+    <method name="GetStateJson">
+      <arg type="s" direction="out" name="state_json"/>
+    </method>
+    <method name="Rescan">
+      <arg type="s" direction="out" name="state_json"/>
+    </method>
+    <method name="SetControl">
+      <arg type="s" direction="in" name="monitor_id"/>
+      <arg type="y" direction="in" name="code"/>
+      <arg type="q" direction="in" name="value"/>
+      <arg type="s" direction="out" name="state_json"/>
+    </method>
+    <method name="SetAllBrightness">
+      <arg type="q" direction="in" name="value"/>
+      <arg type="s" direction="out" name="state_json"/>
+    </method>
+    <property name="ApiVersion" type="u" access="read"/>
+    <signal name="StateChanged">
+      <arg type="s" name="state_json"/>
+    </signal>
+  </interface>
+</node>

@@ -1,0 +1,4 @@
+[D-BUS Service]
+Name=io.github.avifenesh.GnomeMonitorSettings
+Exec=/usr/bin/gnome-monitor-settings-service
+SystemdService=gnome-monitor-settings-service.service
