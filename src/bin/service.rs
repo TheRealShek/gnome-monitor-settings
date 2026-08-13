@@ -1,9 +1,4 @@
-use std::{
-    fs,
-    path::Path,
-    sync::Arc,
-    time::{Duration, Instant},
-};
+use std::{fs, path::Path, sync::Arc, time::Duration};
 
 use anyhow::{Context, Result};
 use gnome_monitor_settings::{
@@ -14,6 +9,8 @@ use zbus::object_server::SignalEmitter;
 struct MonitorSettingsService {
     manager: Arc<MonitorManager>,
 }
+
+const CONNECTOR_POLL_INTERVAL: Duration = Duration::from_secs(10);
 
 impl MonitorSettingsService {
     fn json<T: serde::Serialize>(value: &T) -> zbus::fdo::Result<String> {
@@ -93,7 +90,7 @@ impl MonitorSettingsService {
     async fn state_changed(emitter: &SignalEmitter<'_>, state_json: &str) -> zbus::Result<()>;
 }
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(
@@ -124,9 +121,7 @@ async fn main() -> Result<()> {
     initialize_state(connection.clone(), Arc::clone(&manager));
 
     tracing::info!(service = DBUS_NAME, "monitor settings service is ready");
-    loop {
-        tokio::time::sleep(Duration::from_secs(3600)).await;
-    }
+    std::future::pending().await
 }
 
 fn initialize_state(connection: zbus::Connection, manager: Arc<MonitorManager>) {
@@ -145,16 +140,13 @@ fn initialize_state(connection: zbus::Connection, manager: Arc<MonitorManager>) 
 fn watch_connectors(connection: zbus::Connection, manager: Arc<MonitorManager>) {
     tokio::spawn(async move {
         let mut signature = connector_signature();
-        let mut last_refresh = Instant::now();
         loop {
-            tokio::time::sleep(Duration::from_secs(2)).await;
+            tokio::time::sleep(CONNECTOR_POLL_INTERVAL).await;
             let next_signature = connector_signature();
-            let periodic_refresh = last_refresh.elapsed() >= Duration::from_secs(300);
-            if next_signature == signature && !periodic_refresh {
+            if next_signature == signature {
                 continue;
             }
             signature = next_signature;
-            last_refresh = Instant::now();
 
             let state = match manager.refresh().await {
                 Ok(state) => state,

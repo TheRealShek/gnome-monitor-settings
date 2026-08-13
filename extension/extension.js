@@ -16,6 +16,7 @@ import {
 
 const OBJECT_PATH = '/io/github/avifenesh/GnomeMonitorSettings';
 const APPLICATION_ID = 'io.github.avifenesh.GnomeMonitorSettings.desktop';
+const WRITE_DEBOUNCE_MS = 500;
 
 const ServiceProxy = Gio.DBusProxy.makeProxyWrapper(`
 <node>
@@ -56,6 +57,7 @@ class BrightnessSlider extends QuickSettings.QuickSlider {
         this._allMonitors = allMonitors;
         this._maximum = allMonitors ? 100 : Math.max(1, monitor.control.maximum);
         this._timeoutId = 0;
+        this._confirmedValue = null;
         this._sliderChangedId = this.slider.connect('notify::value',
             () => this._queueWrite());
         this.slider.accessible_name = `${title} brightness`;
@@ -68,8 +70,10 @@ class BrightnessSlider extends QuickSettings.QuickSlider {
         if (this._timeoutId)
             GLib.source_remove(this._timeoutId);
         this._timeoutId = 0;
+        const nextValue = Math.max(0, Math.min(this._maximum, value));
+        this._confirmedValue = Math.round(nextValue);
         this.slider.block_signal_handler(this._sliderChangedId);
-        this.slider.value = Math.max(0, Math.min(1, value / this._maximum));
+        this.slider.value = nextValue / this._maximum;
         this.slider.unblock_signal_handler(this._sliderChangedId);
     }
 
@@ -77,10 +81,11 @@ class BrightnessSlider extends QuickSettings.QuickSlider {
         if (this._timeoutId)
             GLib.source_remove(this._timeoutId);
 
-        this._timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 250, () => {
+        this._timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, WRITE_DEBOUNCE_MS, () => {
             this._timeoutId = 0;
             const value = Math.round(this.slider.value * this._maximum);
-            this._controller.setBrightness(this._monitorId, value, this._allMonitors);
+            if (value !== this._confirmedValue)
+                this._controller.setBrightness(this._monitorId, value, this._allMonitors);
             return GLib.SOURCE_REMOVE;
         });
     }

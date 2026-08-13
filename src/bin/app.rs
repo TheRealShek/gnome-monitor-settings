@@ -13,7 +13,8 @@ use gnome_monitor_settings::{
 };
 use gtk::{gio, glib};
 
-const DBUS_TIMEOUT_MS: i32 = 10_000;
+const DBUS_TIMEOUT_MS: i32 = 20_000;
+const WRITE_DEBOUNCE: std::time::Duration = std::time::Duration::from_millis(500);
 
 fn main() -> glib::ExitCode {
     let app = adw::Application::builder().application_id(APP_ID).build();
@@ -249,13 +250,28 @@ fn continuous_row(
     all_monitors: bool,
 ) -> adw::ActionRow {
     let row = adw::ActionRow::builder().title(title).build();
-    let scale = gtk::Scale::with_range(gtk::Orientation::Horizontal, 0.0, maximum, 1.0);
-    scale.set_value(current.clamp(0.0, maximum));
-    scale.set_draw_value(true);
-    scale.set_value_pos(gtk::PositionType::Right);
+    let adjustment =
+        gtk::Adjustment::new(current.clamp(0.0, maximum), 0.0, maximum, 1.0, 10.0, 0.0);
+    let scale = gtk::Scale::new(gtk::Orientation::Horizontal, Some(&adjustment));
+    scale.set_draw_value(false);
     scale.set_width_request(300);
     scale.set_hexpand(true);
-    row.add_suffix(&scale);
+
+    let spin = gtk::SpinButton::builder()
+        .adjustment(&adjustment)
+        .climb_rate(1.0)
+        .digits(0)
+        .numeric(true)
+        .width_chars(maximum.round().to_string().len().max(3) as i32)
+        .build();
+    spin.set_update_policy(gtk::SpinButtonUpdatePolicy::IfValid);
+    spin.set_tooltip_text(Some("Enter an exact value"));
+
+    let controls = gtk::Box::new(gtk::Orientation::Horizontal, 12);
+    controls.set_hexpand(true);
+    controls.append(&scale);
+    controls.append(&spin);
+    row.add_suffix(&controls);
     row.set_activatable_widget(Some(&scale));
 
     let debounce = Rc::new(RefCell::new(None::<glib::SourceId>));
@@ -264,85 +280,86 @@ fn continuous_row(
     let monitor_id = monitor_id.map(str::to_owned);
     let overlay = overlay.clone();
     let proxy = proxy.clone();
-    scale.connect_value_changed(move |scale| {
+    adjustment.connect_value_changed(move |adjustment| {
         if updating.replace(false) {
             return;
         }
         if let Some(source) = debounce.borrow_mut().take() {
             source.remove();
         }
-        let scale = scale.clone();
+        let adjustment = adjustment.clone();
+        let controls = controls.clone();
         let monitor_id = monitor_id.clone();
         let overlay = overlay.clone();
         let proxy = proxy.clone();
         let debounce_after_timeout = Rc::clone(&debounce);
         let updating = Rc::clone(&updating);
         let confirmed = Rc::clone(&confirmed);
-        *debounce.borrow_mut() = Some(glib::timeout_add_local_once(
-            std::time::Duration::from_millis(250),
-            move || {
-                debounce_after_timeout.borrow_mut().take();
-                let value = scale.value().round() as u16;
-                scale.set_sensitive(false);
-                glib::spawn_future_local(async move {
-                    let parameters = if all_monitors {
-                        (value,).to_variant()
-                    } else {
-                        (monitor_id.as_deref().unwrap_or_default(), code, value).to_variant()
-                    };
-                    let method = if all_monitors {
-                        "SetAllBrightness"
-                    } else {
-                        "SetControl"
-                    };
-                    match call_state_method(&proxy, method, Some(&parameters)).await {
-                        Ok(state) => {
-                            let actual = if all_monitors {
-                                let controls: Vec<&Control> = state
-                                    .monitors
+        *debounce.borrow_mut() = Some(glib::timeout_add_local_once(WRITE_DEBOUNCE, move || {
+            debounce_after_timeout.borrow_mut().take();
+            let value = adjustment.value().round() as u16;
+            if value == confirmed.get().round() as u16 {
+                return;
+            }
+            controls.set_sensitive(false);
+            glib::spawn_future_local(async move {
+                let parameters = if all_monitors {
+                    (value,).to_variant()
+                } else {
+                    (monitor_id.as_deref().unwrap_or_default(), code, value).to_variant()
+                };
+                let method = if all_monitors {
+                    "SetAllBrightness"
+                } else {
+                    "SetControl"
+                };
+                match call_state_method(&proxy, method, Some(&parameters)).await {
+                    Ok(state) => {
+                        let actual = if all_monitors {
+                            let controls: Vec<&Control> = state
+                                .monitors
+                                .iter()
+                                .filter_map(|monitor| monitor.control(BRIGHTNESS))
+                                .collect();
+                            (!controls.is_empty()).then(|| {
+                                controls
                                     .iter()
-                                    .filter_map(|monitor| monitor.control(BRIGHTNESS))
-                                    .collect();
-                                (!controls.is_empty()).then(|| {
-                                    controls
-                                        .iter()
-                                        .map(|control| {
-                                            f64::from(control.current) * 100.0
-                                                / f64::from(control.maximum.max(1))
-                                        })
-                                        .sum::<f64>()
-                                        / controls.len() as f64
-                                })
-                            } else {
-                                state.monitors.iter().find_map(|monitor| {
-                                    monitor_id
-                                        .as_deref()
-                                        .filter(|id| *id == monitor.id)
-                                        .and_then(|_| monitor.control(code))
-                                        .map(|control| f64::from(control.current))
-                                })
-                            };
-                            if let Some(actual) = actual {
-                                confirmed.set(actual);
-                                if (scale.value() - actual).abs() > f64::EPSILON {
-                                    updating.set(true);
-                                    scale.set_value(actual);
-                                }
-                            }
-                        }
-                        Err(error) => {
-                            let previous = confirmed.get();
-                            if (scale.value() - previous).abs() > f64::EPSILON {
+                                    .map(|control| {
+                                        f64::from(control.current) * 100.0
+                                            / f64::from(control.maximum.max(1))
+                                    })
+                                    .sum::<f64>()
+                                    / controls.len() as f64
+                            })
+                        } else {
+                            state.monitors.iter().find_map(|monitor| {
+                                monitor_id
+                                    .as_deref()
+                                    .filter(|id| *id == monitor.id)
+                                    .and_then(|_| monitor.control(code))
+                                    .map(|control| f64::from(control.current))
+                            })
+                        };
+                        if let Some(actual) = actual {
+                            confirmed.set(actual);
+                            if (adjustment.value() - actual).abs() > f64::EPSILON {
                                 updating.set(true);
-                                scale.set_value(previous);
+                                adjustment.set_value(actual);
                             }
-                            overlay.add_toast(adw::Toast::new(&error.to_string()));
                         }
                     }
-                    scale.set_sensitive(true);
-                });
-            },
-        ));
+                    Err(error) => {
+                        let previous = confirmed.get();
+                        if (adjustment.value() - previous).abs() > f64::EPSILON {
+                            updating.set(true);
+                            adjustment.set_value(previous);
+                        }
+                        overlay.add_toast(adw::Toast::new(&error.to_string()));
+                    }
+                }
+                controls.set_sensitive(true);
+            });
+        }));
     });
     row
 }

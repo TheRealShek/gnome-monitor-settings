@@ -150,6 +150,26 @@ impl MonitorManager {
             Arc::clone(locks.entry(bus).or_insert_with(|| Arc::new(Mutex::new(()))))
         };
         let _bus_guard = bus_lock.lock().await;
+
+        let current = {
+            let state = self.state.read().await;
+            state
+                .monitors
+                .iter()
+                .find(|monitor| monitor.id == monitor_id)
+                .ok_or_else(|| ManagerError::MissingMonitor(monitor_id.to_owned()))?
+                .control(code)
+                .filter(|control| control.writable)
+                .ok_or_else(|| ManagerError::Unsupported {
+                    monitor_id: monitor_id.to_owned(),
+                    code,
+                })?
+                .current
+        };
+        if value == current {
+            return Ok(self.state().await);
+        }
+
         self.rate_limit(monitor_id, code).await;
 
         let backend = Arc::clone(&self.backend);
@@ -359,6 +379,40 @@ mod tests {
             .unwrap_err();
         assert!(matches!(error, ManagerError::OutOfRange { .. }));
         assert!(backend.writes.lock().unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn skips_writes_when_the_value_is_unchanged() {
+        let backend = Arc::new(FakeBackend {
+            monitors: vec![monitor("one", 18)],
+            writes: StdMutex::new(Vec::new()),
+        });
+        let manager = MonitorManager::with_write_interval(backend.clone(), Duration::ZERO);
+        manager.refresh().await.unwrap();
+
+        let state = manager.set_control("one", BRIGHTNESS, 10).await.unwrap();
+
+        assert_eq!(state.monitors[0].control(BRIGHTNESS).unwrap().current, 10);
+        assert!(backend.writes.lock().unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn coalesces_concurrent_duplicate_writes() {
+        let backend = Arc::new(FakeBackend {
+            monitors: vec![monitor("one", 18)],
+            writes: StdMutex::new(Vec::new()),
+        });
+        let manager = MonitorManager::with_write_interval(backend.clone(), Duration::ZERO);
+        manager.refresh().await.unwrap();
+
+        let (first, second) = tokio::join!(
+            manager.set_control("one", BRIGHTNESS, 42),
+            manager.set_control("one", BRIGHTNESS, 42),
+        );
+
+        first.unwrap();
+        second.unwrap();
+        assert_eq!(backend.writes.lock().unwrap().as_slice(), &[(18, 0x10, 42)]);
     }
 
     #[tokio::test]

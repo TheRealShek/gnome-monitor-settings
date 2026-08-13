@@ -15,7 +15,7 @@ Only these VCP features are accepted by the service:
 - colour preset (`0x14`)
 - red, green, and blue gain (`0x16`, `0x18`, `0x1a`)
 
-The service rejects every other feature even if a client calls D-Bus directly. In particular, it does not expose monitor power, factory reset, input switching, or manufacturer-specific features. Values are checked against discovered limits, operations are serialized per I²C bus, rapid writes are rate-limited, and successful writes are read back.
+The service rejects every other feature even if a client calls D-Bus directly. In particular, it does not expose monitor power, factory reset, input switching, or manufacturer-specific features. Values are checked against discovered limits, operations are serialized per I²C bus, unchanged and duplicate queued values are ignored, and successful writes are read back. Continuous controls wait until slider or numeric-input activity has been quiet for 500 ms before sending the settled value.
 
 No process needs root privileges. Fedora's `ddcutil` package supplies a udev rule that grants the active desktop user access to applicable I²C devices.
 
@@ -87,6 +87,8 @@ gnome-extensions enable monitor-settings@avifenesh.github.io
 ```
 
 Opening the application or Quick Settings activates the user service through D-Bus. Clicking a Quick Settings slider icon opens the full application.
+
+The service uses a single-threaded asynchronous runtime while idle. It checks the lightweight kernel connector status every 10 seconds and runs DDC discovery only after a connector change or a manual rescan; it does not periodically wake monitors to refresh every control.
 
 After upgrading an existing installation, reload and restart the user service so it acquires its dedicated D-Bus name:
 

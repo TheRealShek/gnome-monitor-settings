@@ -9,6 +9,7 @@ use thiserror::Error;
 use crate::model::{Control, Monitor, SAFE_FEATURES, choices_for, feature_definition};
 
 const COMMAND_TIMEOUT: Duration = Duration::from_secs(8);
+const COMMAND_POLL_INTERVAL: Duration = Duration::from_millis(50);
 
 #[derive(Debug, Error)]
 pub enum BackendError {
@@ -75,7 +76,7 @@ impl DdcutilBackend {
             match child.try_wait() {
                 Ok(Some(_)) => break,
                 Ok(None) if started.elapsed() < self.timeout => {
-                    std::thread::sleep(Duration::from_millis(20));
+                    std::thread::sleep(COMMAND_POLL_INTERVAL);
                 }
                 Ok(None) => {
                     let _ = child.kill();
