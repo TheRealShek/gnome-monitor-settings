@@ -6,9 +6,14 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as QuickSettings from 'resource:///org/gnome/shell/ui/quickSettings.js';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 
-import {BRIGHTNESS, brightnessMonitors, combinedBrightness, parseState} from './state.js';
+import {
+    BRIGHTNESS,
+    SERVICE_NAME,
+    brightnessMonitors,
+    combinedBrightness,
+    parseState,
+} from './state.js';
 
-const BUS_NAME = 'io.github.avifenesh.GnomeMonitorSettings';
 const OBJECT_PATH = '/io/github/avifenesh/GnomeMonitorSettings';
 const APPLICATION_ID = 'io.github.avifenesh.GnomeMonitorSettings.desktop';
 
@@ -136,7 +141,7 @@ class Controller {
         this._destroyed = false;
         this._signalId = 0;
 
-        this._proxy = new ServiceProxy(Gio.DBus.session, BUS_NAME, OBJECT_PATH,
+        this._proxy = new ServiceProxy(Gio.DBus.session, SERVICE_NAME, OBJECT_PATH,
             (proxy, error) => {
                 if (this._destroyed)
                     return;

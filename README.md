@@ -88,6 +88,13 @@ gnome-extensions enable monitor-settings@avifenesh.github.io
 
 Opening the application or Quick Settings activates the user service through D-Bus. Clicking a Quick Settings slider icon opens the full application.
 
+After upgrading an existing installation, reload and restart the user service so it acquires its dedicated D-Bus name:
+
+```sh
+systemctl --user daemon-reload
+systemctl --user restart gnome-monitor-settings-service.service
+```
+
 ## Hardware validation
 
 Hardware writes are intentionally a separate validation stage. Before enabling the extension, verify discovery and read-only communication manually:

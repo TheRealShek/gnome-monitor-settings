@@ -1,5 +1,6 @@
 export const API_VERSION = 1;
 export const BRIGHTNESS = 0x10;
+export const SERVICE_NAME = 'io.github.avifenesh.GnomeMonitorSettings.Service';
 
 export function parseState(json) {
     const state = JSON.parse(json);

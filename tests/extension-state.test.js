@@ -1,4 +1,5 @@
 import {
+    SERVICE_NAME,
     brightnessMonitors,
     combinedBrightness,
     parseState,
@@ -27,6 +28,12 @@ const state = parseState(JSON.stringify({
         },
     ],
 }));
+
+assertEqual(
+    SERVICE_NAME === 'io.github.avifenesh.GnomeMonitorSettings',
+    false,
+    'keeps the service name distinct from the GTK application ID'
+);
 
 const monitors = brightnessMonitors(state);
 assertEqual(monitors.length, 2, 'filters brightness-capable monitors');

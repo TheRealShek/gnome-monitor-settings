@@ -5,7 +5,7 @@ PartOf=graphical-session.target
 
 [Service]
 Type=dbus
-BusName=io.github.avifenesh.GnomeMonitorSettings
+BusName=io.github.avifenesh.GnomeMonitorSettings.Service
 ExecStart=/usr/bin/gnome-monitor-settings-service
 Restart=on-failure
 RestartSec=2s

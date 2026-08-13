@@ -30,7 +30,8 @@ install: build
 	install -Dm644 data/io.github.avifenesh.GnomeMonitorSettings.desktop $(DESTDIR)$(PREFIX)/share/applications/io.github.avifenesh.GnomeMonitorSettings.desktop
 	install -Dm644 data/io.github.avifenesh.GnomeMonitorSettings.metainfo.xml $(DESTDIR)$(PREFIX)/share/metainfo/io.github.avifenesh.GnomeMonitorSettings.metainfo.xml
 	install -Dm644 data/io.github.avifenesh.GnomeMonitorSettings.svg $(DESTDIR)$(PREFIX)/share/icons/hicolor/scalable/apps/io.github.avifenesh.GnomeMonitorSettings.svg
-	install -Dm644 data/io.github.avifenesh.GnomeMonitorSettings.service $(DESTDIR)$(PREFIX)/share/dbus-1/services/io.github.avifenesh.GnomeMonitorSettings.service
+	install -Dm644 data/io.github.avifenesh.GnomeMonitorSettings.Service.service $(DESTDIR)$(PREFIX)/share/dbus-1/services/io.github.avifenesh.GnomeMonitorSettings.Service.service
+	rm -f $(DESTDIR)$(PREFIX)/share/dbus-1/services/io.github.avifenesh.GnomeMonitorSettings.service
 	install -Dm644 data/gnome-monitor-settings-service.service $(DESTDIR)$(PREFIX)/lib/systemd/user/gnome-monitor-settings-service.service
 	install -Dm644 data/io.github.avifenesh.GnomeMonitorSettings1.xml $(DESTDIR)$(PREFIX)/share/dbus-1/interfaces/io.github.avifenesh.GnomeMonitorSettings1.xml
 	install -d $(DESTDIR)$(PREFIX)/share/gnome-shell/extensions/$(UUID)

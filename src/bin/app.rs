@@ -8,12 +8,11 @@ use anyhow::{Context, Result};
 use gio::prelude::DBusProxyExt;
 use glib::variant::ToVariant;
 use gnome_monitor_settings::{
-    DBUS_INTERFACE, DBUS_NAME, DBUS_PATH,
+    APP_ID, DBUS_INTERFACE, DBUS_NAME, DBUS_PATH,
     model::{BRIGHTNESS, Control, ControlKind, Monitor, ServiceState},
 };
 use gtk::{gio, glib};
 
-const APP_ID: &str = "io.github.avifenesh.GnomeMonitorSettings";
 const DBUS_TIMEOUT_MS: i32 = 10_000;
 
 fn main() -> glib::ExitCode {
