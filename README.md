@@ -1,6 +1,6 @@
 # Monitor Settings for GNOME
 
-Monitor Settings is a native GNOME application and Quick Settings extension for controls exposed by DDC/CI external monitors. A Rust user service owns monitor access, the Rust GTK/libadwaita application exposes every deliberately supported control, and a small GJS extension provides one brightness slider per monitor plus a combined slider when multiple monitors are connected.
+Monitor Settings is a native GNOME application and Quick Settings extension for controls exposed by DDC/CI external monitors. A Rust user service owns monitor access, the Rust GTK/libadwaita application exposes every deliberately supported control, and a small GJS extension places one brightness slider per monitor next to GNOME's system sliders, plus a combined slider when multiple monitors are connected.
 
 The project currently targets Fedora 44 and GNOME Shell 50. It does not replace GNOME's built-in laptop-panel brightness control.
 

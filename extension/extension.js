@@ -145,6 +145,12 @@ class Controller {
         this._indicator = null;
         this._destroyed = false;
         this._signalId = 0;
+        this._quickSettings = Main.panel.statusArea.quickSettings;
+        this._menuSignalId = this._quickSettings.menu.connect('open-state-changed',
+            (_menu, isOpen) => {
+                if (isOpen)
+                    this._placeSlidersAfterSystemBrightness();
+            });
 
         this._proxy = new ServiceProxy(Gio.DBus.session, SERVICE_NAME, OBJECT_PATH,
             (proxy, error) => {
@@ -200,7 +206,24 @@ class Controller {
         }
         this._indicator?.destroy();
         this._indicator = new MonitorIndicator(this, state);
-        Main.panel.statusArea.quickSettings.addExternalIndicator(this._indicator, 2);
+        this._quickSettings.addExternalIndicator(this._indicator, 2);
+        this._placeSlidersAfterSystemBrightness();
+    }
+
+    _placeSlidersAfterSystemBrightness() {
+        // GNOME 50 exposes no public anchor for positioning external items.
+        const systemBrightness =
+            this._quickSettings._brightness?.quickSettingsItems?.[0];
+        const grid = systemBrightness?.get_parent();
+        const sliders = this._indicator?.quickSettingsItems ?? [];
+
+        if (!grid || !sliders.every(slider => slider.get_parent() === grid))
+            return;
+
+        // GNOME's public extension API always appends external items. Keep its
+        // setup, then move our sliders as a group behind the system sliders.
+        for (const slider of [...sliders].reverse())
+            grid.set_child_above_sibling(slider, systemBrightness);
     }
 
     setBrightness(monitorId, value, allMonitors) {
@@ -233,6 +256,10 @@ class Controller {
             this._proxy.disconnectSignal(this._signalId);
         this._signalId = 0;
         this._proxy = null;
+        if (this._quickSettings && this._menuSignalId)
+            this._quickSettings.menu.disconnect(this._menuSignalId);
+        this._menuSignalId = 0;
+        this._quickSettings = null;
     }
 }
 
